@@ -21,7 +21,7 @@ plt.rcParams['figure.figsize'] = (10, 10)
 plt.rcParams['image.interpolation'] = 'nearest'
 plt.rcParams['image.cmap'] = 'gray'
 
-itera=8000000
+itera=1500000
 net = caffe.Classifier('../try1_2/depoly.prototxt',
       '/media/crw/MyBook/Model/FaceAlignment/try1_2/snapshot_iter_' +str(itera)+'.caffemodel')
 
