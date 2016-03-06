@@ -1,8 +1,0 @@
-#!/usr/bin/env sh
-
-TOOLS=./build/tools
-
-$TOOLS/caffe train \
-  --solver=faceexp/try1_3/solver.prototxt  \
-  --snapshot=/media/crw/DataCenter/ResultModel/faceexp/try1_3/snapshot_iter_20000.solverstate
-
