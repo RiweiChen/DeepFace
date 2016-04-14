@@ -33,7 +33,7 @@ face verification ROC result：
 ##Face Dataset
 
 We collect the face datasets usually used by recently years' paper, and divide by different task. Also we  simply describe each of the dataset.(In Chinese)
-======================================
+
 
 For more implement details, please reference my blog
 - [1983的专栏](http://blog.csdn.net/chenriwei2)
