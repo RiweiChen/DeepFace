@@ -1,32 +1,41 @@
 # DeepFace
-基于开源框架实现的人脸识别、脸脸检测、人脸关键点检测等任务
-各个任务分别在FaceDetection, FaceAlignment, FaceRecognition 三个文件中
+a deep face analysis implement, mainly based on -[Caffe](https://github.com/BVLC/caffe). At this time, face analysis tasks like detection, alignment and recognition have been done. -[中文Readme](https://github.com/RiweiChen/DeepFace/blob/master/README_ch.md)
 
-##人脸检测
-  baseline: 基于基于滑动窗口的人脸检测，将训练好了的网络改为全卷积网络，然后利用全卷积网络对于任意大小的图像输入，进行获取输出HeapMap。
+Each task is divide by different folder.
 
-检测结果示例：
+##Face detection
+
+###baseline
+Face detection using sliding windows style, it first train a face/noface two class classification network, and then tranform to a full convolution network, detection is based on the heatmap when input a large full size image.
+
+face detection result example：
 ![result1](FaceDetection/result/1.jpeg)
 ![result2](FaceDetection/result/2.jpeg)
 
   
-##人脸关键点检测
-  try1_1： 基于DeepID网络结构的人脸关键点检测
+##Face key points detection
 
-检测结果示例：
+###try1_1
+face 5 key points detection using DeepID architecture.
+![result1](FaceAlignment/figures/deepid.png)
+
+face 5 key points detection result example：
 ![result1](FaceAlignment/result/1.png)
 
-##人脸验证
-  deepid： 基于DeepID网络结构的人脸验证
+##Face Verification
+###deepid
+Face verification based on DeepID network architecture.
 
-ROC曲线：
+face verification ROC result：
 ![roc](FaceRecongnition/result/roc_cosine.png)
 
-注：这个不是DeepID网络结构跑出来的
 
+##Face Dataset
+
+We collect the face datasets usually used by recently years' paper, and divide by different task. Also we  simply describe each of the dataset.(In Chinese)
 ======================================
 
-更多详细的步骤，可以参照我的博客
+For more implement details, please reference my blog
 - [1983的专栏](http://blog.csdn.net/chenriwei2)
 
-欢迎大家提出改进意见。
+It is welcome for everyone to make suggestions and improvement.
