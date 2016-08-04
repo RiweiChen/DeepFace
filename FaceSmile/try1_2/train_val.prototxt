@@ -1,0 +1,301 @@
+name: "Face_smile_net"
+layer {
+  name: "data" type: "ImageData" top: "data" top: "label"
+  include { phase: TRAIN  }
+  transform_param { mirror: true scale: 0.00390625 }
+  image_data_param {
+    source: "../smile_train.list"
+    batch_size: 64
+    #is_color: false
+    shuffle: true
+  }
+}
+
+layer {
+  name: "data" type: "ImageData" top: "data" top: "label"
+  include { phase: TEST  }
+  transform_param { mirror: true scale: 0.00390625 }
+  image_data_param {
+    source: "../smile_val.list"
+    batch_size: 64
+    #is_color: false
+    shuffle: true
+  }
+}
+
+# --- stage 1, we use a little bit large filter ~
+layer {
+  name: "conv1" type: "Convolution" bottom: "data" top: "conv1"
+  param { lr_mult: 1 decay_mult: 1 }
+  param { lr_mult: 2 decay_mult: 0 }
+  convolution_param { num_output: 64 kernel_size: 7 stride: 1 pad: 3
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" value: 0.1 }
+  }
+}
+layer {
+    name: "slice1" type: "Slice" bottom: "conv1" top: "slice1_1" top: "slice1_2"
+    slice_param{ slice_dim: 1 }
+}
+layer {
+    name: "eltwise1" type: "Eltwise" bottom: "slice1_1" bottom: "slice1_2" top: "eltwise1"
+    eltwise_param{ operation: MAX }
+}
+layer {
+	name:"pool1" type:"Pooling" bottom:"eltwise1" top:"pool1"
+	pooling_param{ pool:MAX kernel_size:2 stride:2 }
+}
+
+# --- stage 2, use maxout combine small filters 
+layer {
+  name: "conv2_1" type: "Convolution" bottom: "pool1" top: "conv2_1"
+  param { lr_mult: 1 decay_mult: 1 }
+  param { lr_mult: 2 decay_mult: 0 }
+  convolution_param { num_output: 128 kernel_size: 3 stride: 1 pad: 1
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" value: 0.1 }
+  }
+}
+layer {
+    name: "slice2" type: "Slice"  bottom: "conv2_1"  top: "slice2_1"  top: "slice2_2"
+    slice_param{  slice_dim: 1  }
+}
+layer {
+    name: "eltwise2"  type: "Eltwise"  bottom: "slice2_1"  bottom: "slice2_2"  top: "eltwise2"
+    eltwise_param{  operation: MAX  }
+}
+layer {
+  name: "conv2_2"  type: "Convolution"  bottom: "eltwise2"  top: "conv2_2"
+  param {  lr_mult: 1  decay_mult: 1  }
+  param {  lr_mult: 2  decay_mult: 0  }
+  convolution_param {
+    num_output: 128  kernel_size: 3  stride: 1 pad: 1
+    weight_filler {  type: "xavier"  }
+    bias_filler {type: "constant"   value: 0.1  }  
+    }
+}
+layer {
+    name: "slice3"  type: "Slice"  bottom: "conv2_2"  top: "slice3_1"  top: "slice3_2"
+    slice_param{  slice_dim: 1  }
+}
+layer {
+    name: "eltwise3"  type: "Eltwise"  bottom: "slice3_1"  bottom: "slice3_2"  top: "eltwise3"
+    eltwise_param{  operation: MAX  }
+}
+layer {
+	name: "pool3" type: "Pooling" bottom: "eltwise3" top:"pool3"
+	pooling_param{ 	pool:MAX 	kernel_size:2 	stride: 2	}
+}
+
+# --- stage 3
+layer {
+  name: "conv3_1"  type: "Convolution"  bottom: "pool3"  top: "conv3_1"
+  param {  lr_mult: 1  decay_mult: 1  }
+  param {  lr_mult: 2  decay_mult: 0  }
+  convolution_param {
+    num_output: 192  kernel_size: 3  stride: 1 pad:1
+    weight_filler {  type: "xavier"  }
+    bias_filler { type: "constant"  value: 0.1  }
+  }
+}
+layer {
+    name: "slice4" type: "Slice" bottom: "conv3_1" top: "slice4_1" top: "slice4_2"
+    slice_param{ slice_dim: 1 }
+}
+layer {
+    name: "eltwise4" type: "Eltwise" bottom: "slice4_1" bottom: "slice4_2" top: "eltwise4"
+    eltwise_param{ operation: MAX }
+}
+layer {
+  name: "conv3_2" type: "Convolution"  bottom: "eltwise4"   top: "conv3_2"
+  param {  lr_mult: 1   decay_mult: 1 }
+  param {  lr_mult: 2  decay_mult: 0 }
+  convolution_param {
+    num_output: 192  kernel_size: 3  stride: 1 pad :1
+    weight_filler{ type: "xavier"  }
+    bias_filler {  type: "constant"   value: 0.1  }
+  }
+}
+layer {
+    name: "slice5" type: "Slice"  bottom: "conv3_2" top: "slice5_1" top: "slice5_2"
+    slice_param{ slice_dim: 1 }
+}
+layer {
+    name: "eltwise5" type: "Eltwise" bottom: "slice5_1" bottom: "slice5_2" top: "eltwise5"
+    eltwise_param{ operation: MAX }
+}
+layer {
+	name:"pool5" 	type:"Pooling" 	bottom:"eltwise5" 	top:"pool5"
+	pooling_param{ 	pool:MAX 	kernel_size:2 	stride:2 }
+}
+
+# --- stage 4
+layer {
+  name: "conv4_1" type: "Convolution" bottom: "pool5" top: "conv4_1"
+  param { lr_mult: 1 decay_mult: 1 }
+  param { lr_mult: 2 decay_mult: 0 }
+  convolution_param {
+    num_output: 256 kernel_size: 3 stride: 1 pad:1
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" value: 0.1 }
+  }
+}
+layer {
+    name: "slice6" type: "Slice"  bottom: "conv4_1"  top: "slice6_1"  top: "slice6_2"
+    slice_param { slice_dim: 1  }
+}
+layer {
+    name: "eltwise6"  type: "Eltwise"  bottom: "slice6_1"  bottom: "slice6_2"  top: "eltwise6"
+    eltwise_param {operation: MAX   }
+}
+layer {
+  name: "conv4_2"  type: "Convolution"  bottom: "eltwise6"  top: "conv4_2"
+  param {  lr_mult: 1  decay_mult: 1  }
+  param {  lr_mult: 2  decay_mult: 0  }
+  convolution_param {
+    num_output: 256  kernel_size: 3  stride: 1 pad: 1
+    weight_filler {  type: "xavier"  }
+    bias_filler {  type: "constant"   value: 0.1  }
+  }
+}
+layer {
+    name: "slice7"  type: "Slice"  bottom: "conv4_2"  top: "slice7_1"  top: "slice7_2"
+    slice_param{  slice_dim: 1  }
+}
+layer {
+    name: "eltwise7"  type: "Eltwise"  bottom: "slice7_1"  bottom: "slice7_2"  top: "eltwise7"
+    eltwise_param{  operation: MAX  }
+}
+
+layer {
+  name: "conv4_3"  type: "Convolution"  bottom: "eltwise7"  top: "conv4_3"
+  param {  lr_mult: 1  decay_mult: 1  }
+  param {  lr_mult: 2  decay_mult: 0  }
+  convolution_param {
+    num_output: 256  kernel_size: 3  stride: 1 pad: 1
+    weight_filler {  type: "xavier"  }
+    bias_filler {  type: "constant"   value: 0.1  }
+  }
+}
+layer {
+    name: "slice7_3"  type: "Slice"  bottom: "conv4_3"  top: "slice4_3_1"  top: "slice4_3_2"
+    slice_param{  slice_dim: 1  }
+}
+layer {
+    name: "eltwise7_3"  type: "Eltwise"  bottom: "slice4_3_1"  bottom: "slice4_3_2"  top: "eltwise7_3"
+    eltwise_param{  operation: MAX  }
+}
+
+layer {
+	name:"pool7_3" 	type:"Pooling" 	bottom:"eltwise7_3" 	top:"pool7_3"
+	pooling_param { 	pool:MAX 	kernel_size:2 	stride: 2 }
+}
+
+
+# --- stage 5
+layer {
+  name: "conv5_1"  type: "Convolution"  bottom: "pool7_3"  top: "conv5_1"
+  param {  lr_mult: 1  decay_mult: 1  }
+  param {  lr_mult: 2  decay_mult: 0  }
+  convolution_param {
+    num_output: 512  kernel_size: 3  stride: 1 pad: 1
+    weight_filler {type: "xavier" }
+    bias_filler { type: "constant" value: 0.1 }
+  }
+}
+layer {
+    name: "slice8" type: "Slice"  bottom: "conv5_1"  top: "slice8_1"  top: "slice8_2"
+    slice_param{  slice_dim: 1  }
+}
+layer {
+    name: "eltwise8"  type: "Eltwise"  bottom: "slice8_1"  bottom: "slice8_2"  top: "eltwise8"
+    eltwise_param{ operation: MAX }
+}
+layer {
+  name: "conv5_2"  type: "Convolution"  bottom: "eltwise8"  top: "conv5_2"
+  param {  lr_mult: 1  decay_mult: 1  }
+  param {  lr_mult: 2  decay_mult: 0  }
+  convolution_param {
+    num_output: 512  kernel_size: 3  stride: 1 pad: 1
+    weight_filler { type: "xavier"  }
+    bias_filler {   type: "constant"   value: 0.1   }
+  }
+}
+layer {
+    name: "slice9"   type: "Slice"   bottom: "conv5_2"   top: "slice9_1"   top: "slice9_2"
+    slice_param     { slice_dim: 1  }
+}
+layer {
+    name: "eltwise9"   type: "Eltwise"   bottom: "slice9_1"   bottom: "slice9_2"   top: "eltwise9"
+    eltwise_param   { operation: MAX   }
+}
+layer {
+  name: "conv5_3"  type: "Convolution"  bottom: "eltwise9"  top: "conv5_3"
+  param {  lr_mult: 1  decay_mult: 1  }
+  param {  lr_mult: 2  decay_mult: 0  }
+  convolution_param {
+    num_output: 512  kernel_size: 3  stride: 1 pad: 1
+    weight_filler { type: "xavier"  }
+    bias_filler {   type: "constant"   value: 0.1   }
+  }
+}
+layer {
+    name: "slice5_3"   type: "Slice"   bottom: "conv5_3"   top: "slice5_3_1"   top: "slice5_3_2"
+    slice_param     { slice_dim: 1  }
+}
+layer {
+    name: "eltwise5_3"   type: "Eltwise"   bottom: "slice5_3_1"   bottom: "slice5_3_2"   top: "eltwise5_3"
+    eltwise_param   { operation: MAX   }
+}
+
+# --- final stage, use spp layer to generate multi-scale feature , better for face recognition
+# plug in the spp layer ~~
+layer {
+	name:"spp1" 	type:"SPP" 	bottom:"eltwise5_3" 	top:"spp1"
+	spp_param{ 	pool:MAX pyramid_height: 3 }
+}
+layer {
+    name: "drop_spp" type: "Dropout" bottom: "spp1" top: "drop_spp"
+    dropout_param { dropout_ratio : 0.5  }
+}
+
+layer {
+  name: "fc1_new" type: "InnerProduct"   bottom: "drop_spp"   top: "fc1"
+  param {   lr_mult: 1   decay_mult: 1 }
+  param { lr_mult: 2 decay_mult: 0 }
+  inner_product_param {
+    num_output: 512
+    weight_filler { type: "gaussian" std: 0.01 }
+    bias_filler { type: "constant"  value: 0.1 }
+  }
+}
+layer {
+    name: "slice10"   type: "Slice"   bottom: "fc1"   top: "slice10_1"   top: "slice10_2"
+    slice_param{   slice_dim: 1   }
+}
+layer {
+    name: "eltwise10"   type: "Eltwise"   bottom: "slice10_1"   bottom: "slice10_2"   top: "eltwise10"
+    eltwise_param{   operation: MAX  }
+}
+layer {
+    name : "dropoutfc1"  type: "Dropout"  bottom: "eltwise10"  top: "eltwise10"
+    dropout_param{  dropout_ratio: 0.5  }
+}
+layer {
+  name: "classfy_smile"  type: "InnerProduct"  bottom: "eltwise10"  top: "classfy_smile"
+  param {  lr_mult: 10  decay_mult: 10  }
+  param {  lr_mult: 2  decay_mult: 0  }
+  inner_product_param {
+    num_output: 2
+    weight_filler {  type: "gaussian" std: 0.01  }
+    bias_filler {  type: "constant"  value: 0.1  }
+  }
+}
+layer {
+	name: "loss_smile" type: "SoftmaxWithLoss" bottom: "classfy_smile" bottom: "label"
+}
+layer {
+    include: { phase: TEST }
+    name: "accuracy_smile" type: "Accuracy" bottom: "classfy_smile" bottom: "label" top:"accuracy_smile"
+}
+

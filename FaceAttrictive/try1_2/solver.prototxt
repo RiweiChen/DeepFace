@@ -1,0 +1,19 @@
+net: "train_val.prototxt"
+test_iter: 100
+test_interval: 1000
+
+base_lr: 0.0001
+lr_policy: "poly"
+gamma: 0.000005
+power: 0.75
+
+display: 100
+max_iter: 50000
+momentum: 0.9
+weight_decay: 0.0005
+snapshot: 5000
+
+snapshot_prefix: "model/maxout128x128"
+solver_mode: GPU
+
+#debug_info:true
