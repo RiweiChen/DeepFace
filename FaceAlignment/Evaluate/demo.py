@@ -4,25 +4,21 @@ Created on Fri Nov  7 20:39:22 2014
 
 @author: crw
 """
-
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-import cv2
-
 caffe_root = '/home/crw/caffe-local/'
-
-import sys
 sys.path.insert(0, caffe_root + 'python')
-
 import caffe
-#指定一些图形显示的参数;
+import cv2
+# 指定一些图形显示的参数;
 plt.rcParams['figure.figsize'] = (10, 10)
 plt.rcParams['image.interpolation'] = 'nearest'
 plt.rcParams['image.cmap'] = 'gray'
 
 
-#定义显示函数;
+# 定义显示函数;
 def vis_square(data, padsize=1, padval=0):
     # 归一化到0-1
     data -= data.min()
@@ -57,7 +53,6 @@ for i in range(testImageNum):
     image=image*255
 
     scores = net.predict([image], False)
- 
     result[j-1,:,:]=img*255
     
     j=j+1

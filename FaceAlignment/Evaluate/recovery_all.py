@@ -4,18 +4,13 @@ Created on Fri Nov  7 20:39:22 2014
 
 @author: crw
 """
-
-#先导入一些模块;
 import PIL.Image as Image
 import numpy as np
-import caffe
 import os.path
 import sys
-
 caffe_root = '/home/crw/caffe-local/'
-
 sys.path.insert(0, caffe_root + 'python')
-
+import caffe
 net = caffe.Classifier(caffe_root+'faceexp/try1_2/face_exp.prototxt',
                                    '/media/crw/DataCenter/ResultModel/faceexp/try1_2/snapshot_iter_30000.caffemodel')
 net.set_phase_test()

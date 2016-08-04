@@ -17,9 +17,6 @@ from nms import nms_average,nms_max
 caffe.set_device(0)
 caffe.set_mode_gpu()
 
-
-#============
-#Model related:
 model_path = '/media/crw/MyBook/FaceModel/FaceDetection/try1_4/'
 model_define= model_path+'deploy.prototxt'
 model_weight =model_path+'snapshot_iter_100000.caffemodel'
@@ -38,7 +35,6 @@ map_idx = 0
 params = ['deepid', 'fc7']
 params_fc =  ['deepid-conv', 'fc7-conv']
 
-
 def generateBoundingBox(featureMap, scale):
     '''
     @brief: 生成窗口
@@ -47,18 +43,16 @@ def generateBoundingBox(featureMap, scale):
     boundingBox = []
     for (x,y), prob in np.ndenumerate(featureMap):
        if(prob >= threshold):
-           #映射到原始的图像中的大小
+           # 映射到原始的图像中的大小
             x=x-1
             y=y-1
             boundingBox.append([float(stride * y)/scale, float(stride *x )/scale, 
                               float(stride * y + cellSize - 1)/scale, float(stride * x + cellSize - 1)/scale, prob])
-            #boundingBox.append([float(stride * y-cellSize/2.0)/scale, float(stride *x -cellSize/2.0)/scale, 
-            #                   float(stride * y + cellSize/2.0 - 1)/scale, float(stride * x + cellSize/2.0 - 1)/scale, prob])
     return boundingBox
 
 def convert_full_conv(model_define,model_weight,model_define_fc,model_weight_fc):
     '''
-    @breif : 将原始网络转换为全卷积模型
+    @breif: 将原始网络转换为全卷积模型
     @param: model_define,二分类网络定义文件
     @param: model_weight，二分类网络训练好的参数
     @param: model_define_fc,生成的全卷积网络定义文件
@@ -93,7 +87,7 @@ def re_verify(net_vf, img):
         
 def face_detection_image(net,net_vf,image_name):
     '''
-    @检测单张人脸图像
+    @brief: 检测单张人脸图像
     '''
     scales = []
     imgs = skimage.io.imread(image_name)
@@ -101,7 +95,7 @@ def face_detection_image(net,net_vf,image_name):
             rows,cols,ch = imgs.shape
     else:
             rows,cols = imgs.shape
-    #计算需要的检测的尺度因子
+    # 计算需要的检测的尺度因子
     min = rows if  rows<=cols  else  cols
     max = rows if  rows>=cols  else  cols
     # 放大的尺度    
@@ -109,7 +103,7 @@ def face_detection_image(net,net_vf,image_name):
     while (delim >= 1):
         scales.append(delim)
         delim=delim-0.5
-    #缩小的尺度
+    # 缩小的尺度
     min = min * factor
     factor_count = 1
     while(min >= face_w):
@@ -133,15 +127,14 @@ def face_detection_image(net,net_vf,image_name):
     for scale in scales:
         w,h = int(rows* scale),int(cols* scale)
         scale_img= tf.resize(imgs,(w,h))
-        #更改网络输入data图像的大小
+        # 更改网络输入data图像的大小
         net.blobs['data'].reshape(1,channel,w,h)
-        #转换结构
+        # 转换结构
         transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
         #transformer.set_mean('data', np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1))
         transformer.set_transpose('data', (2,0,1))
         transformer.set_channel_swap('data', (2,1,0))
         transformer.set_raw_scale('data', raw_scale)
-        #前馈一次
         out = net.forward_all(data=np.asarray([transformer.preprocess('data', scale_img)]))
         ###显示热图用
         tt=tt+1
@@ -153,13 +146,13 @@ def face_detection_image(net,net_vf,image_name):
         boxes = generateBoundingBox(out['prob'][0,map_idx], scale)
         if(boxes):
             total_boxes.extend(boxes)
-    #非极大值抑制
+    # 非极大值抑制
     boxes_nms = np.array(total_boxes)
     true_boxes1 = nms_max(boxes_nms, overlapThresh=0.3)
     true_boxes = nms_average(np.array(true_boxes1), overlapThresh=0.07)
     #===================
     plt.savefig('heatmap/'+image_name.split('/')[-1])
-    #在图像中画出检测到的人脸框
+    # 在图像中画出检测到的人脸框
     fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(6, 6))
     ax.imshow(imgs)
     for box in true_boxes:
