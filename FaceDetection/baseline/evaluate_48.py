@@ -1,23 +1,20 @@
 # -*- coding: utf-8 -*-
+import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import sys
-import os
+#plt.switch_backend('agg')
 from  math import pow
-import skimage.io
 from skimage import transform as tf
-
-caffe_root = '/media/crw/MyBook/Caffe/caffe-triplet/'
-sys.path.insert(0, caffe_root + 'python')
+import cv2
 import caffe
-
 from nms import nms_average,nms_max
+import render_result
 
-caffe.set_device(0)
-caffe.set_mode_gpu()
+caffe.set_mode_cpu()
+#caffe.set_device(0)
 
-model_path = '/media/crw/MyBook/FaceModel/FaceDetection/try1_4/'
+model_path = './'
 model_define= model_path+'deploy.prototxt'
 model_weight =model_path+'snapshot_iter_100000.caffemodel'
 model_define_fc =model_path+'deploy_fc.prototxt'
@@ -30,24 +27,21 @@ stride = 16
 cellSize = face_w
 threshold = 0.95
 factor = 0.793700526 # 缩小因子
-
+MAX_W = 1000
 map_idx = 0
 params = ['deepid', 'fc7']
 params_fc =  ['deepid-conv', 'fc7-conv']
 
+
 def generateBoundingBox(featureMap, scale):
-    '''
-    @brief: 生成窗口
-    @param: featureMap,特征图，scale：尺度
-    '''
     boundingBox = []
-    for (x,y), prob in np.ndenumerate(featureMap):
+    for (y,x), prob in np.ndenumerate(featureMap):
        if(prob >= threshold):
-           # 映射到原始的图像中的大小
-            x=x-1
-            y=y-1
-            boundingBox.append([float(stride * y)/scale, float(stride *x )/scale, 
-                              float(stride * y + cellSize - 1)/scale, float(stride * x + cellSize - 1)/scale, prob])
+            x-=1
+            y-=1
+            # format: (x1,y1,x2,y2)
+            boundingBox.append([float(stride * x)/scale, float(stride *y )/scale, 
+                              float(stride * x + cellSize - 1)/scale, float(stride * y + cellSize - 1)/scale, prob])
     return boundingBox
 
 def convert_full_conv(model_define,model_weight,model_define_fc,model_weight_fc):
@@ -69,114 +63,74 @@ def convert_full_conv(model_define,model_weight,model_define_fc,model_weight_fc)
     print 'convert done!'
     return net_fc
 
-def re_verify(net_vf, img):
-    '''
-    @breif: 对检测到的目标框进行重新的验证
-    '''
-    img= tf.resize(img,(face_w,face_w))
-    transformer = caffe.io.Transformer({'data': net_vf.blobs['data'].data.shape})
-    transformer.set_transpose('data', (2,0,1))
-    transformer.set_channel_swap('data', (2,1,0))
-    transformer.set_raw_scale('data', raw_scale)
-    out = net_vf.forward_all(data=np.asarray([transformer.preprocess('data', img)]))
-    #print out['prob']
-    if out['prob'][0,map_idx] > threshold:
-        return True
-    else:
-        return False
-        
-def face_detection_image(net,net_vf,image_name):
-    '''
-    @brief: 检测单张人脸图像
-    '''
+def show_heatmap(heatmaps):
+    num_scale = len(heatmaps)
+    s=int(np.sqrt(num_scale))+1
+    for idx,heatmap in enumerate(heatmaps):
+        plt.subplot(s, s+1, idx+1)
+        plt.axis('off')
+        plt.imshow(heatmap)
+    #plt.savefig('heatmap/'+image_name.split('/')[-1])
+
+def caculate_scales(imgs):
     scales = []
-    imgs = skimage.io.imread(image_name)
     if imgs.ndim==3:
-            rows,cols,ch = imgs.shape
+        rows,cols,ch = imgs.shape
     else:
-            rows,cols = imgs.shape
-    # 计算需要的检测的尺度因子
-    min = rows if  rows<=cols  else  cols
-    max = rows if  rows>=cols  else  cols
+        rows,cols = imgs.shape
+    min_ = rows if  rows<=cols  else  cols
+    max_ = rows if  rows>=cols  else  cols
     # 放大的尺度    
-    delim = 2500/max
+    delim = MAX_W/max_
     while (delim >= 1):
         scales.append(delim)
         delim=delim-0.5
     # 缩小的尺度
-    min = min * factor
+    min_ = min_ * factor
     factor_count = 1
-    while(min >= face_w):
+    while(min_ >= face_w):
         scale = pow(factor,  factor_count)
         scales.append(scale)
-        min = min * factor
+        min_ = min_ * factor
         factor_count += 1
-    #=========================
-    #scales.append(1)
+    scales.append(1)
+    return scales 
+
+def face_detection_image(net,image_name):
+    imgs = cv2.imread(image_name)
+    rows,cols,ch = imgs.shape
+    scales = caculate_scales(imgs)
     total_boxes = []
-    ###显示热图用
-    num_scale = len(scales)
-    s1=int(np.sqrt(num_scale))+1
-    tt=1
-    plt.subplot(s1, s1+1, tt)
-    plt.axis('off')
-    plt.title("Input Image")
-    im=caffe.io.load_image(image_name)
-    plt.imshow(im)
-    #============
     for scale in scales:
         w,h = int(rows* scale),int(cols* scale)
-        scale_img= tf.resize(imgs,(w,h))
-        # 更改网络输入data图像的大小
+        scale_img = tf.resize(imgs,(w,h))
+        #scale_img = cv2.resize(imgs,(w,h))/255.0
         net.blobs['data'].reshape(1,channel,w,h)
-        # 转换结构
         transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
-        #transformer.set_mean('data', np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1))
         transformer.set_transpose('data', (2,0,1))
         transformer.set_channel_swap('data', (2,1,0))
         transformer.set_raw_scale('data', raw_scale)
         out = net.forward_all(data=np.asarray([transformer.preprocess('data', scale_img)]))
-        ###显示热图用
-        tt=tt+1
-        plt.subplot(s1, s1+1, tt)
-        plt.axis('off')
-        plt.title("sacle: "+ "%.2f" %scale)
-        plt.imshow(out['prob'][0,map_idx])
-        #===========
         boxes = generateBoundingBox(out['prob'][0,map_idx], scale)
         if(boxes):
             total_boxes.extend(boxes)
-    # 非极大值抑制
     boxes_nms = np.array(total_boxes)
-    true_boxes1 = nms_max(boxes_nms, overlapThresh=0.3)
-    true_boxes = nms_average(np.array(true_boxes1), overlapThresh=0.07)
-    #===================
-    plt.savefig('heatmap/'+image_name.split('/')[-1])
-    # 在图像中画出检测到的人脸框
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(6, 6))
-    ax.imshow(imgs)
+    true_boxes = nms_max(boxes_nms, overlapThresh=0.3)
+    true_boxes = nms_average(np.array(true_boxes), overlapThresh=0.07)
+    img_cv = render_result.read_image(image_name)
+    result = img_cv
     for box in true_boxes:
-        im_crop = im[box[0]:box[2],box[1]:box[3],:]
-        if im_crop.shape[0] == 0 or im_crop.shape[1] == 0:
-            continue
-        if re_verify(net_vf, im_crop) == True:
-            rect = mpatches.Rectangle((box[0], box[1]), box[2]-box[0], box[3]-box[1],
-                fill=False, edgecolor='red', linewidth=1)
-            ax.text(box[0], box[1]+20,"{0:.3f}".format(box[4]),color='white', fontsize=6)
-            ax.add_patch(rect)
-    plt.savefig('result/'+image_name.split('/')[-1])
-    plt.close()
-    return out['prob'][0,map_idx]
-    
+        result = render_result.draw_rectangle(result,(int(box[0]),int(box[1]),int(box[2]),int(box[3])),(0,0,255))
+    render_result.save_2_file(result,'result/'+image_name.split('/')[-1])
+    return true_boxes
     
 if __name__ == "__main__":
     if not os.path.isfile(model_weight_fc):
         net_fc = convert_full_conv(model_define,model_weight,model_define_fc,model_weight_fc)
     else:
-        net_fc = caffe.Net(model_define_fc, model_weight_fc, caffe.TEST)
-    net_vf = caffe.Net(model_define, model_weight, caffe.TEST)
-    for i in range(210):
-        image_name = '/media/crw/MyBook/TestData/myDataBase/'+str(i+1)+'.jpg'
-        print i
-        fm = face_detection_image(net_fc,net_vf,image_name)
-        plt.close('all')
+        net_fc = caffe.Net(model_define_fc, model_weight_fc, caffe.TEST) 
+    filename = "./images/2.jpg"
+    fms = face_detection_image(net_fc,filename)
+    for fm in fms:
+        print(fm)
+    plt.close('all')
